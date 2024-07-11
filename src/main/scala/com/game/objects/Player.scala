@@ -3,20 +3,22 @@ package com.game.objects
 import com.game.exceptions.UnsupportedTypeException
 
 import scala.collection.mutable.ListBuffer
+import scala.swing.{BoxPanel, Component, Label, MainFrame, Orientation, Panel, ScrollPane, TextArea}
 
 /**
  * @author staticowl
  */
 
 class Player(){
-  private var name:String = ""
+  private var playerName:String = ""
   private var hand:ListBuffer[Card] = new ListBuffer[Card]
   private var betScore:Int = 0
   private var pass:Boolean = false
   private var trump:Boolean = false
+  private val textArea:TextArea = new TextArea{ editable = false}
 
-  def getName:String = this.name
-  def setName(name: String): Unit = this.name = name
+  def getName:String = this.playerName
+  def setName(playerName: String): Unit = this.playerName = playerName
   def getHand:List[Card] = this.hand.toList
   def addToHand(card: Any) : Unit = {
     card match {
@@ -25,6 +27,7 @@ class Player(){
       case s : Seq[Card] => s.foreach(c => this.hand += c)
       case _ => throw new UnsupportedTypeException("Only Card, List[Card] and Seq[Card] is supported.")
     }
+    textArea.text = hand.toList.mkString("", "\n", "")
   }
   def setHand(cards:ListBuffer[Card]) : Unit = this.hand = cards
   def getCall:Int = this.betScore
@@ -38,6 +41,12 @@ class Player(){
       case None => setPass(true)
     }
   }
+
+  def playerPanel:Panel =new BoxPanel(Orientation.Vertical){
+    contents += new Label(playerName)
+    contents += new ScrollPane(textArea)
+  }
+
 }
 
 object Player{

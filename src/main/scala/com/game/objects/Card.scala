@@ -53,7 +53,9 @@ case object Seven extends Rank {
   val points = 0
 }
 
-case class Card(suit: Suit, rank: Rank)
+case class Card(suit: Suit, rank: Rank){
+  override def toString: String = s"${suit.toString}, ${rank.toString}"
+}
 
 object Card {
   private val deck: Seq[Card] = for {

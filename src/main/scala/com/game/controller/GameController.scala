@@ -46,7 +46,11 @@ class GameController {
 //      deck = deck.tail
 //    })
     deck = dealFour(deck)
-    bet(players)
+//    showCard(players)
+//    bet(players)
+    print("Waiting")
+    StdIn.readLine()
+    print("Wait Over")
     deck = dealFour(deck)
     if (deck.nonEmpty) throw new BadDealException("The Deck is not empty after full deal", deck)
   }

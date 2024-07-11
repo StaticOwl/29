@@ -48,6 +48,11 @@
       <version>${spec2.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.scala-lang.modules</groupId>
+      <artifactId>scala-swing_2.13</artifactId>
+      <version>3.0.0</version>
+    </dependency>
   </dependencies>
 
   <build>
