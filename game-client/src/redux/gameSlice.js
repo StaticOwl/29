@@ -1,13 +1,27 @@
+// src/redux/gameSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import axiosInstance from '../api/axiosConfig';
 
-const API_BASE_URL = 'http://localhost:8080'; // Change this to your server's URL
+// Remove this line as we're now using the axiosInstance
+// const API_BASE_URL = 'http://localhost:8080';
+
+export const createGame = createAsyncThunk(
+    'game/create',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.get('/game/create');
+            return response.data;
+        } catch (error) {
+            return rejectWithValue('Error creating game');
+        }
+    }
+);
 
 export const joinGame = createAsyncThunk(
     'game/join',
-    async (playerId, { rejectWithValue }) => {
+    async ({ gameId, playerId }, { rejectWithValue }) => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/join?playerId=${playerId}`);
+            const response = await axiosInstance.get(`/game/${gameId}/join?playerId=${playerId}`);
             return response.data;
         } catch (error) {
             return rejectWithValue('Error joining game');
@@ -17,9 +31,9 @@ export const joinGame = createAsyncThunk(
 
 export const makeMove = createAsyncThunk(
     'game/move',
-    async ({ playerId, move }, { rejectWithValue }) => {
+    async ({ gameId, playerId, move }, { rejectWithValue }) => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/move?playerId=${playerId}&move=${move}`);
+            const response = await axiosInstance.get(`/game/${gameId}/move?playerId=${playerId}&move=${move}`);
             return response.data;
         } catch (error) {
             return rejectWithValue('Error making move');
@@ -30,6 +44,7 @@ export const makeMove = createAsyncThunk(
 const gameSlice = createSlice({
     name: 'game',
     initialState: {
+        gameId: null,
         playerId: '',
         messages: [],
         status: 'idle',
@@ -42,30 +57,33 @@ const gameSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            .addCase(joinGame.pending, (state) => {
-                state.status = 'loading';
+            .addCase(createGame.fulfilled, (state, action) => {
+                state.gameId = action.payload.split(': ')[1];
+                state.status = 'succeeded';
+                state.messages.push(`Game created with ID: ${state.gameId}`);
             })
             .addCase(joinGame.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 state.messages.push(action.payload);
             })
-            .addCase(joinGame.rejected, (state, action) => {
-                state.status = 'failed';
-                state.error = action.payload;
-                state.messages.push(action.payload);
-            })
-            .addCase(makeMove.pending, (state) => {
-                state.status = 'loading';
-            })
             .addCase(makeMove.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 state.messages.push(action.payload);
             })
-            .addCase(makeMove.rejected, (state, action) => {
-                state.status = 'failed';
-                state.error = action.payload;
-                state.messages.push(action.payload);
-            });
+            .addMatcher(
+                action => action.type.endsWith('/pending'),
+                state => {
+                    state.status = 'loading';
+                }
+            )
+            .addMatcher(
+                action => action.type.endsWith('/rejected'),
+                (state, action) => {
+                    state.status = 'failed';
+                    state.error = action.payload;
+                    state.messages.push(action.payload);
+                }
+            );
     },
 });
 

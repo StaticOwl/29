@@ -7,28 +7,39 @@ object GameSessionActor {
   sealed trait Command
   case class JoinGame(playerId: String, replyTo: ActorRef[String]) extends Command
   case class MakeMove(playerId: String, move: String, replyTo: ActorRef[String]) extends Command
+  case class GetGameState(replyTo: ActorRef[GameState]) extends Command
 
-  def apply(): Behavior[Command] = Behaviors.setup { context =>
-    var players = Set.empty[String]
+  case class GameState(players: Set[String], moves: List[String])
 
+  def apply(gameId: String): Behavior[Command] = Behaviors.setup { context =>
+    context.log.info(s"Game session $gameId created")
+    gameSession(gameId, Set.empty, List.empty)
+  }
+
+  private def gameSession(gameId: String, players: Set[String], moves: List[String]): Behavior[Command] =
     Behaviors.receiveMessage {
       case JoinGame(playerId, replyTo) =>
         if (players.size < 4) {
-          players += playerId
-          replyTo ! s"Player $playerId joined. ${4 - players.size} spots left."
+          val updatedPlayers = players + playerId
+          replyTo ! s"Player $playerId joined game $gameId. ${4 - updatedPlayers.size} spots left."
+          gameSession(gameId, updatedPlayers, moves)
         } else {
-          replyTo ! "Game is full."
+          replyTo ! s"Game $gameId is full."
+          Behaviors.same
         }
-        Behaviors.same
 
       case MakeMove(playerId, move, replyTo) =>
         if (players.contains(playerId)) {
-          // Process the move
-          replyTo ! s"Move '$move' accepted for player $playerId"
+          val updatedMoves = s"$playerId: $move" :: moves
+          replyTo ! s"Move '$move' accepted for player $playerId in game $gameId"
+          gameSession(gameId, players, updatedMoves)
         } else {
-          replyTo ! "Player not in this game."
+          replyTo ! s"Player $playerId is not in game $gameId."
+          Behaviors.same
         }
+
+      case GetGameState(replyTo) =>
+        replyTo ! GameState(players, moves)
         Behaviors.same
     }
-  }
 }
