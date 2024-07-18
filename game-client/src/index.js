@@ -10,6 +10,7 @@ import {DevSupport} from "@react-buddy/ide-toolbox";
 import {ComponentPreviews, useInitial} from "./dev";
 
 const theme = createTheme();
+const cors = require("cors");
 
 const container = document.getElementById('root');
 const root = createRoot(container);

@@ -1,6 +1,7 @@
-package com.game.exceptions
+package com.twenty_nine.game.exceptions
 
-import com.game.objects.Card
+import com.twenty_nine.game.objects.Card
+
 
 /**
  * @author staticowl

@@ -1,15 +1,13 @@
-// src/redux/gameSlice.js
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axiosInstance from '../api/axiosConfig';
-
-// Remove this line as we're now using the axiosInstance
-// const API_BASE_URL = 'http://localhost:8080';
 
 export const createGame = createAsyncThunk(
     'game/create',
-    async (_, { rejectWithValue }) => {
+    async ({ gameName, cardBack, playerId }, { rejectWithValue, dispatch }) => {
         try {
-            const response = await axiosInstance.get('/game/create');
+            const response = await axiosInstance.post('/game/create', { gameName, cardBack, playerId });
+            const gameId = response.data.gameId;
+            await dispatch(joinGame({ gameId, playerId }));
             return response.data;
         } catch (error) {
             return rejectWithValue('Error creating game');
@@ -41,11 +39,36 @@ export const makeMove = createAsyncThunk(
     }
 );
 
+export const fillWithBots = createAsyncThunk(
+    'game/fillWithBots',
+    async (gameId, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.post(`/game/${gameId}/fillWithBots`);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue('Error filling game with bots');
+        }
+    }
+);
+
+export const startGame = createAsyncThunk(
+    'game/start',
+    async (gameId, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.post(`/game/${gameId}/start`);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue('Error starting game');
+        }
+    }
+);
+
 const gameSlice = createSlice({
     name: 'game',
     initialState: {
         gameId: null,
         playerId: '',
+        players: [],
         messages: [],
         status: 'idle',
         error: null,
@@ -58,17 +81,28 @@ const gameSlice = createSlice({
     extraReducers: (builder) => {
         builder
             .addCase(createGame.fulfilled, (state, action) => {
-                state.gameId = action.payload.split(': ')[1];
+                state.gameId = action.payload.gameId;
+                state.players = [state.playerId];
                 state.status = 'succeeded';
                 state.messages.push(`Game created with ID: ${state.gameId}`);
             })
             .addCase(joinGame.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                state.messages.push(action.payload);
+                state.players = action.payload.players;
+                state.messages.push(`Joined game: ${state.gameId}`);
             })
             .addCase(makeMove.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                state.messages.push(action.payload);
+                state.messages.push(action.payload.message);
+            })
+            .addCase(fillWithBots.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.players = action.payload.players;
+                state.messages.push('Filled game with bots');
+            })
+            .addCase(startGame.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.messages.push('Game started');
             })
             .addMatcher(
                 action => action.type.endsWith('/pending'),

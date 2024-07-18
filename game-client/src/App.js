@@ -1,98 +1,34 @@
-import React, { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { Container, Typography, TextField, Button, List, ListItem, ListItemText, Paper } from '@mui/material';
-import { setPlayerId, createGame, joinGame, makeMove } from './redux/gameSlice';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import PlayerIdForm from './components/PlayerIdForm';
+import MainMenu from './components/MainMenu';
+import CreateGameForm from './components/CreateGameForm';
+import GamePage from './components/GamePage';
+import { useSelector } from 'react-redux';
+import './App.css';
 
 function App() {
-    const dispatch = useDispatch();
-    const { gameId, playerId, messages, status } = useSelector((state) => state.game);
-    const [move, setMove] = useState('');
-    const [joinGameId, setJoinGameId] = useState('');
-
-    const handleCreateGame = () => {
-        dispatch(createGame());
-    };
-
-    const handleJoinGame = () => {
-        dispatch(joinGame({ gameId: joinGameId, playerId }));
-    };
-
-    const handleMakeMove = () => {
-        dispatch(makeMove({ gameId, playerId, move }));
-        setMove('');
-    };
+    const playerId = useSelector((state) => state.game.playerId);
+    const gameId = useSelector((state) => state.game.gameId);
 
     return (
-        <Container maxWidth="sm">
-            <Typography variant="h4" component="h1" gutterBottom>
-                Game Client
-            </Typography>
-            <Paper sx={{ padding: '20px', marginBottom: '20px' }}>
-                <TextField
-                    label="Player ID"
-                    value={playerId}
-                    onChange={(e) => dispatch(setPlayerId(e.target.value))}
-                    fullWidth
-                    margin="normal"
+        <Router>
+            <Routes>
+                <Route path="/" element={<PlayerIdForm />} />
+                <Route
+                    path="/menu"
+                    element={playerId ? <MainMenu /> : <Navigate to="/" />}
                 />
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleCreateGame}
-                    fullWidth
-                    disabled={status === 'loading'}
-                >
-                    Create New Game
-                </Button>
-            </Paper>
-            <Paper sx={{ padding: '20px', marginBottom: '20px' }}>
-                <TextField
-                    label="Game ID"
-                    value={joinGameId}
-                    onChange={(e) => setJoinGameId(e.target.value)}
-                    fullWidth
-                    margin="normal"
+                <Route
+                    path="/create"
+                    element={playerId ? <CreateGameForm /> : <Navigate to="/" />}
                 />
-                <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={handleJoinGame}
-                    fullWidth
-                    disabled={status === 'loading'}
-                >
-                    Join Game
-                </Button>
-            </Paper>
-            {gameId && (
-                <Paper sx={{ padding: '20px', marginBottom: '20px' }}>
-                    <TextField
-                        label="Move"
-                        value={move}
-                        onChange={(e) => setMove(e.target.value)}
-                        fullWidth
-                        margin="normal"
-                    />
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleMakeMove}
-                        fullWidth
-                        disabled={status === 'loading'}
-                    >
-                        Make Move
-                    </Button>
-                </Paper>
-            )}
-            <Paper>
-                <List>
-                    {messages.map((message, index) => (
-                        <ListItem key={index}>
-                            <ListItemText primary={message} />
-                        </ListItem>
-                    ))}
-                </List>
-            </Paper>
-        </Container>
+                <Route
+                    path="/game"
+                    element={gameId ? <GamePage /> : <Navigate to="/menu" />}
+                />
+            </Routes>
+        </Router>
     );
 }
 
