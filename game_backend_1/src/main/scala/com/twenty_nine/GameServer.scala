@@ -2,14 +2,18 @@ package com.twenty_nine
 
 import akka.actor.typed.{ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.event.Logging
+import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.Http
 import com.twenty_nine.actor.GameManagerActor
 import com.twenty_nine.routes.GameRoutes
+import com.typesafe.config.ConfigFactory
 
 import scala.util.{Failure, Success}
-import scala.concurrent.{ExecutionContext, Future}
 
 object GameServer {
+  implicit val system: ActorSystem[Any] = ActorSystem(Behaviors.empty, "GameServer")
+  private val log = Logging(system.toClassic, "GameServer")
   private def startHttpServer(routes: GameRoutes)(implicit system: ActorSystem[_]): Unit = {
     import system.executionContext
 
@@ -26,6 +30,10 @@ object GameServer {
 
   def main(args: Array[String]): Unit = {
     val rootBehavior: Behavior[Nothing] = Behaviors.setup[Nothing] { context =>
+      val config = ConfigFactory.load()
+//      log.info("Loaded Config" + config.root().render())
+      log.info("Configs:")
+      log.info(config.getString("akka-http-server-cors"))
       val gameManager = context.spawn(GameManagerActor(), "game-manager")
       val routes = new GameRoutes(gameManager)(context.system)
 
