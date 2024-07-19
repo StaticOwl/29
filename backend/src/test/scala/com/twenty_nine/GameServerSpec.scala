@@ -1,27 +1,22 @@
 package com.twenty_nine
 
-import akka.actor.testkit.typed.scaladsl.FishingOutcomes.complete
 import akka.actor.testkit.typed.scaladsl.{ActorTestKit, TestProbe}
 import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model.HttpMethods._
-import akka.http.scaladsl.model.StatusCodes.OK
+import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.{HttpMethod, HttpMethods, StatusCodes}
-import akka.http.scaladsl.model.headers.{HttpOrigin, Origin, `Access-Control-Allow-Credentials`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Origin`, `Access-Control-Max-Age`, `Access-Control-Request-Method`}
-import akka.http.scaladsl.server.{Directives, Route}
-import akka.http.scaladsl.server.Directives.cors
+import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.util.Timeout
 import com.twenty_nine.actor.{GameManagerActor, GameSessionActor}
 import com.twenty_nine.requests.CreateGameRequest
 import com.twenty_nine.routes.GameRoutes
-import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.wordspec.AnyWordSpec
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
-import java.net.http.HttpHeaders
 import scala.concurrent.duration._
 
 class GameServerSpec extends AnyWordSpec with Matchers with ScalatestRouteTest with SprayJsonSupport with DefaultJsonProtocol {

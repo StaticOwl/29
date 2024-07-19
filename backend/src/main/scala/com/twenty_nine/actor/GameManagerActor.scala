@@ -1,7 +1,7 @@
 package com.twenty_nine.actor
 
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
 import com.twenty_nine.actor.GameSessionActor.Command
 
 object GameManagerActor {

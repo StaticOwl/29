@@ -1,6 +1,5 @@
 package com.twenty_nine.routes
 
-import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.event.Logging
@@ -17,8 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class GameRoutes(gameManager: ActorRef[GameManagerActor.ManagerCommand])(implicit system: ActorSystem[_]) extends Directives with JsonSupport {
-  import akka.actor.typed.scaladsl.AskPattern.schedulerFromActorSystem
-  import akka.actor.typed.scaladsl.AskPattern.Askable
+  import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
   private implicit val timeout: Timeout = 3.seconds
   private val log = Logging(system.toClassic, classOf[GameRoutes])
 
