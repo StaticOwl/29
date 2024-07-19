@@ -30,6 +30,10 @@ object GameServer {
 
   def main(args: Array[String]): Unit = {
     val rootBehavior: Behavior[Nothing] = Behaviors.setup[Nothing] { context =>
+      val config = ConfigFactory.load()
+//      log.info("Loaded Config" + config.root().render())
+      log.info("Configs:")
+      log.info(config.getString("akka-http-server-cors"))
       val gameManager = context.spawn(GameManagerActor(), "game-manager")
       val routes = new GameRoutes(gameManager)(context.system)
 
