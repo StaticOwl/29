@@ -9,9 +9,10 @@ import akka.http.scaladsl.model.{HttpMethod, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.util.Timeout
-import com.twenty_nine.actor.{GameManagerActor, GameSessionActor}
-import com.twenty_nine.requests.CreateGameRequest
-import com.twenty_nine.routes.GameRoutes
+import com.twenty_nine.server.actor.{GameManagerActor, GameSessionActor}
+import com.twenty_nine.server.commands.{Command, ManagerCommand}
+import com.twenty_nine.server.requests.CreateGameRequest
+import com.twenty_nine.server.routes.GameRoutes
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.wordspec.AnyWordSpec
@@ -26,8 +27,8 @@ class GameServerSpec extends AnyWordSpec with Matchers with ScalatestRouteTest w
 
   implicit val createGameRequestFormat: RootJsonFormat[CreateGameRequest] = jsonFormat3(CreateGameRequest)
 
-  val gameManagerProbe: TestProbe[GameManagerActor.ManagerCommand] = testKit.createTestProbe[GameManagerActor.ManagerCommand]()
-  val gameSessionProbe: TestProbe[GameSessionActor.Command] = testKit.createTestProbe[GameSessionActor.Command]()
+  val gameManagerProbe: TestProbe[ManagerCommand] = testKit.createTestProbe[ManagerCommand]()
+  val gameSessionProbe: TestProbe[Command] = testKit.createTestProbe[Command]()
 
   val routes: Route = new GameRoutes(gameManagerProbe.ref).route
 

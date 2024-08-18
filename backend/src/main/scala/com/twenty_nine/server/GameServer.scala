@@ -1,12 +1,12 @@
-package com.twenty_nine
+package com.twenty_nine.server
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{ActorSystem, Behavior}
 import akka.event.Logging
 import akka.http.scaladsl.Http
-import com.twenty_nine.actor.GameManagerActor
-import com.twenty_nine.routes.GameRoutes
+import com.twenty_nine.server.actor.GameManagerActor
+import com.twenty_nine.server.routes.GameRoutes
 
 import scala.util.{Failure, Success}
 

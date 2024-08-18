@@ -1,4 +1,4 @@
-package com.twenty_nine.routes
+package com.twenty_nine.server.routes
 
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{ActorRef, ActorSystem}
@@ -7,34 +7,33 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, ExceptionHandler, RejectionHandler, Route}
 import akka.util.Timeout
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.corsRejectionHandler
-import com.twenty_nine.actor.GameManagerActor.{CreateGame, GetGame}
-import com.twenty_nine.actor.{GameManagerActor, GameSessionActor}
-import com.twenty_nine.requests.CreateGameRequest
-import com.twenty_nine.responses.{CreateGameResponse, FillWithBotsResponse}
+import com.twenty_nine.server.actor.{CreateGame, FillWithBot, GameManagerActor, GameSessionActor, GetGame, GetGameState, JoinGame}
+import com.twenty_nine.server.commands.{Command, ManagerCommand}
+import com.twenty_nine.server.requests.CreateGameRequest
+import com.twenty_nine.server.responses.{CreateGameResponse, FillWithBotsResponse}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class GameRoutes(gameManager: ActorRef[GameManagerActor.ManagerCommand])(implicit system: ActorSystem[_]) extends Directives with JsonSupport {
+class GameRoutes(gameManager: ActorRef[ManagerCommand])(implicit system: ActorSystem[_]) extends Directives with JsonSupport {
   import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
   private implicit val timeout: Timeout = 3.seconds
   private val log = Logging(system.toClassic, classOf[GameRoutes])
 
+  private def fetchGame(gameId: String): Future[Option[ActorRef[Command]]] = {
+    gameManager.ask(ref => GetGame(gameId, ref))
+  }
+
   def route: Route = {
-
-    // Your CORS settings are loaded from `application.conf`
-
     val rejectionHandler = corsRejectionHandler.withFallback(RejectionHandler.default)
 
     val exceptionHandler = ExceptionHandler { case e: NoSuchElementException =>
       complete(StatusCodes.NotFound -> e.getMessage)
     }
-
-    // Combining the two handlers only for convenience
     val handleErrors = handleRejections(rejectionHandler) & handleExceptions(exceptionHandler)
 
     handleErrors{
-      cors(/*corsSettings*/) {
+      cors() {
         pathPrefix("game") {
           path("create") {
             post {
@@ -50,10 +49,10 @@ class GameRoutes(gameManager: ActorRef[GameManagerActor.ManagerCommand])(implici
             path(Segment / "join") { gameId =>
               parameter("playerId") { playerId =>
                 get {
-                  val futureGame: Future[Option[ActorRef[GameSessionActor.Command]]] = gameManager.ask(ref => GetGame(gameId, ref))
-                  onSuccess(futureGame) {
+                  val joinGame =fetchGame(gameId)
+                  onSuccess(joinGame) {
                     case Some(game) =>
-                      val result = game.ask(ref => GameSessionActor.JoinGame(playerId, ref))
+                      val result = game.ask(ref => JoinGame(playerId, ref))
                       onSuccess(result) { msg =>
                         complete(msg)
                       }
@@ -66,40 +65,23 @@ class GameRoutes(gameManager: ActorRef[GameManagerActor.ManagerCommand])(implici
             path("game-info" / Segment) { gameId =>
               get {
                 log.info("Calling Game Info Section")
-                val futureGame: Future[Option[ActorRef[GameSessionActor.Command]]] = gameManager.ask(ref => GetGame(gameId, ref))
-                onSuccess((futureGame)) {
-                  case Some(game) => {
-                    val res = game.ask(ref => GameSessionActor.GetGameState(ref))
+                val gameInfo = fetchGame(gameId)
+                onSuccess(gameInfo) {
+                  case Some(game) =>
+                    val res = game.ask(ref => GetGameState(ref))
                     onSuccess(res) { gameState =>
                       complete(gameState.toString)
                     }
-                  }
                   case None => complete(StatusCodes.NotFound, s"Game $gameId not found")
-                }
-              }
-            } ~
-            path(Segment / "move") { gameId =>
-              parameters("playerId", "move") { (playerId, move) =>
-                get {
-                  val futureGame: Future[Option[ActorRef[GameSessionActor.Command]]] = gameManager.ask(ref => GetGame(gameId, ref))
-                  onSuccess(futureGame) {
-                    case Some(game) =>
-                      val result = game.ask(ref => GameSessionActor.MakeMove(playerId, move, ref))
-                      onSuccess(result) { msg =>
-                        complete(msg)
-                      }
-                    case None =>
-                      complete(StatusCodes.NotFound, s"Game $gameId not found")
-                  }
                 }
               }
             } ~
             path(Segment / "fillWithBots") { gameId =>
               post {
-                val futureGame = gameManager.ask(ref => GetGame(gameId, ref))
+                val futureGame = fetchGame(gameId)
                 onSuccess(futureGame) {
                   case Some(game) =>
-                    val result = game.ask(ref => GameSessionActor.FillWithBot(ref))
+                    val result = game.ask(ref => FillWithBot(ref))
                     onSuccess(result) {
                       res => complete(FillWithBotsResponse(res.gameId, res.playerNames, res.msg))
                     }

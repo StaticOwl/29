@@ -1,27 +1,17 @@
-package com.twenty_nine.actor
+package com.twenty_nine.server.actor
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
+import com.twenty_nine.game.MainGame
 import com.twenty_nine.game.objects.Player
+import com.twenty_nine.server.commands.Command
 
 object GameSessionActor {
-  sealed trait Command
-  case class JoinGame(playerId: String, replyTo: ActorRef[String]) extends Command
-  case class MakeMove(playerId: String, move: String, replyTo: ActorRef[String]) extends Command
-  case class GetGameState(replyTo: ActorRef[GameState]) extends Command
-  case class FillWithBot(replyTo: ActorRef[GameInfo]) extends Command
-  case class StartGame(replyTo: ActorRef[String]) extends Command
-
-  case class GameState(players: Set[Player], moves: List[String])
-  case class GameInfo(gameId: String, playerNames: List[String], msg:String)
-
   def apply(gameId: String, gameName: String, cardBack: String): Behavior[Command] = Behaviors.setup { context =>
     context.log.info(s"Game session $gameId created with name $gameName and card back $cardBack")
-    gameSession(gameId, gameName, cardBack, Set.empty, List.empty)
+    gameSession(gameId, gameName, cardBack, Set.empty)
   }
-
-
-  private def gameSession(gameId: String, gameName: String, cardBack: String, players: Set[Player], moves: List[String]): Behavior[Command] =
+  private def gameSession(gameId: String, gameName: String, cardBack: String, players: Set[Player]): Behavior[Command] =
     Behaviors.receiveMessage {
       case JoinGame(playerId, replyTo) =>
         if (players.size < 4) {
@@ -31,24 +21,14 @@ object GameSessionActor {
             updatedPlayers += newPlayer
           }
           replyTo ! s"Player $playerId joined game $gameId. ${4 - updatedPlayers.size} spots left."
-          gameSession(gameId, gameName, cardBack, updatedPlayers, moves)
+          gameSession(gameId, gameName, cardBack, updatedPlayers)
         } else {
           replyTo ! s"Game $gameId is full."
           Behaviors.same
         }
 
-      case MakeMove(playerId, move, replyTo) =>
-        if (players.exists(_.playerName == playerId)) {
-          val updatedMoves = s"$playerId: $move" :: moves
-          replyTo ! s"Move '$move' accepted for player $playerId in game $gameId"
-          gameSession(gameId, gameName, cardBack, players, updatedMoves)
-        } else {
-          replyTo ! s"Player $playerId is not in game $gameId."
-          Behaviors.same
-        }
-
       case GetGameState(replyTo) =>
-        replyTo ! GameState(players, moves)
+        replyTo ! GameState(players)
         Behaviors.same
 
       case FillWithBot(replyTo) =>
@@ -61,7 +41,7 @@ object GameSessionActor {
           replyTo ! GameInfo(gameId = gameId,
             playerNames = updatedPlayers.map(_.playerName).toList,
             msg = s"Added ${updatedPlayers.count(p => p.playerName.contains("Bot"))} Bots")
-          gameSession(gameId, gameName, cardBack, updatedPlayers, moves)
+          gameSession(gameId, gameName, cardBack, updatedPlayers)
         } else {
           replyTo ! GameInfo(gameId = gameId,
             playerNames = players.map(_.playerName).toList,
@@ -72,10 +52,19 @@ object GameSessionActor {
       case StartGame(replyTo) =>
         if (players.size == 4) {
           replyTo ! s"Game $gameId started."
-          // TODO:Implement game start logic here
+          new MainGame(gameId, players.toList).startGame()
+          Behaviors.same
         } else {
           replyTo ! s"Cannot start game $gameId. Waiting for ${4 - players.size} more players."
         }
         Behaviors.same
     }
 }
+
+case class JoinGame(playerId: String, replyTo: ActorRef[String]) extends Command
+case class GetGameState(replyTo: ActorRef[GameState]) extends Command
+case class FillWithBot(replyTo: ActorRef[GameInfo]) extends Command
+case class StartGame(replyTo: ActorRef[String]) extends Command
+
+case class GameState(players: Set[Player])
+case class GameInfo(gameId: String, playerNames: List[String], msg:String)

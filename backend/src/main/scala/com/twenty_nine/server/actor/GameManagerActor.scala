@@ -1,14 +1,10 @@
-package com.twenty_nine.actor
+package com.twenty_nine.server.actor
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-import com.twenty_nine.actor.GameSessionActor.Command
+import com.twenty_nine.server.commands.{Command, ManagerCommand}
 
 object GameManagerActor {
-  sealed trait ManagerCommand
-  case class CreateGame(gameName: String, cardBack: String, playerId: String, replyTo: ActorRef[String]) extends ManagerCommand
-  case class GetGame(gameId: String, replyTo: ActorRef[Option[ActorRef[Command]]]) extends ManagerCommand
-
   def apply(): Behavior[ManagerCommand] = Behaviors.setup { context =>
     var games = Map.empty[String, ActorRef[Command]]
 
@@ -19,7 +15,7 @@ object GameManagerActor {
       case CreateGame(gameName, cardBack, playerId, replyTo) =>
         val gameId = java.util.UUID.randomUUID().toString
         val gameSession = context.spawn(GameSessionActor(gameId, gameName, cardBack), s"game-$gameId")
-        gameSession ! GameSessionActor.JoinGame(playerId, replyTo)
+        gameSession ! JoinGame(playerId, replyTo)
         games += (gameId -> gameSession)
         replyTo ! gameId
         Behaviors.same
@@ -30,3 +26,6 @@ object GameManagerActor {
     }
   }
 }
+
+case class CreateGame(gameName: String, cardBack: String, playerId: String, replyTo: ActorRef[String]) extends ManagerCommand
+case class GetGame(gameId: String, replyTo: ActorRef[Option[ActorRef[Command]]]) extends ManagerCommand
